@@ -1,54 +1,50 @@
-## Project: Build a Traffic Sign Recognition Program
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-Overview
----
-In this project, you will use what you've learned about deep neural networks and convolutional neural networks to classify traffic signs. You will train and validate a model so it can classify traffic sign images using the [German Traffic Sign Dataset](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset). After the model is trained, you will then try out your model on images of German traffic signs that you find on the web.
 
-We have included an Ipython notebook that contains further instructions 
-and starter code. Be sure to download the [Ipython notebook](https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project/blob/master/Traffic_Sign_Classifier.ipynb). 
+# Traffic signs classification with a convolutional network
 
-We also want you to create a detailed writeup of the project. Check out the [writeup template](https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup. The writeup can be either a markdown file or a pdf document.
+Here is my submission for the Udacity SDCND P2 - Traffic sign classifier. 
 
-To meet specifications, the project will require submitting three files: 
-* the Ipython notebook with the code
-* the code exported as an html file
-* a writeup report either as a markdown or pdf file 
+## Dataset
 
-Creating a Great Writeup
----
-A great writeup should include the [rubric points](https://review.udacity.com/#!/rubrics/481/view) as well as your description of how you addressed each point.  You should include a detailed description of the code used in each step (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
+The dataset used is the German Traffic Sign Dataset which consists of 39,209 32×32 px color images for training data, and 12,630 images for testing. There are 43 classes.
 
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
 
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
 
-The Project
----
-The goals / steps of this project are the following:
-* Load the data set
-* Explore, summarize and visualize the data set
-* Design, train and test a model architecture
-* Use the model to make predictions on new images
-* Analyze the softmax probabilities of the new images
-* Summarize the results with a written report
+The data set is provided as a pickle file with 32×32×3 array of pixel intensities, represented as [0, 255] integer values in RGB color space. Class of each image is encoded as an integer in a 0 to 42 range. Dataset is very unbalanced, and some classes have more train/test examples than the others. The images also differ significantly in terms of contrast and brightness, so we will need to apply some kind of normalization to improve feature extraction.
 
-### Dependencies
-This lab requires:
+## Augmentation
 
-* [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit)
+The amount of data we have is not sufficient for a model to generalise well. It is also fairly unbalanced, and some classes are represented to significantly lower extent than the others. The data augmentation is done by generating 200000 new images. These generated images are generated on the fly and not stored in the disk. 
+Random amunt of shearing, rotation and translation. This function was taken from a post by Vivek yadav. Finally the original tranining data set was added to the augmented data. 
+20% of the training data was used for cross validation. 
 
-The lab enviroment can be created with CarND Term1 Starter Kit. Click [here](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for the details.
+## Preprocessing
 
-### Dataset and Repository
+The usual preprocessing in this case would include scaling of pixel values to `[-0.5, +0.5]` (as currently they are in `[0, 255]` range), representing labels in a one-hot encoding and shuffling. Therefore, each pixel is normalized by subtracting 127.5 from it and then dividing by 255. 
 
-1. Download the data set. The classroom has a link to the data set in the "Project Instructions" content. This is a pickled dataset in which we've already resized the images to 32x32. It contains a training, validation and test set.
-2. Clone the project, which contains the Ipython notebook and the writeup template.
-```sh
-git clone https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project
-cd CarND-Traffic-Sign-Classifier-Project
-jupyter notebook Traffic_Sign_Classifier.ipynb
-```
+## Model 
 
-### Requirements for Submission
-Follow the instructions in the `Traffic_Sign_Classifier.ipynb` notebook and write the project report using the writeup template as a guide, `writeup_template.md`. Submit the project code and writeup document.
+### Architecture
+
+The model used is inspired by http://navoshta.com/traffic-signs-classification/. It is fairly simple and has 4 layers: **3 convolutional layers** for feature extraction and **one fully connected layer** as a classifier.
+
+<p align="center">
+  <img src="model_architecture.png" alt="Model architecture"/>
+</p>
+
+As opposed to usual strict feed-forward CNNs I use **multi-scale features**, which means that convolutional layers' output is not only forwarded into subsequent layer, but is also branched off and fed into classifier (e.g. fully connected layer). Please mind that these branched off layers undergo additional max-pooling, so that all convolutions are proportionally subsampled before going into classifier.
+
+### Regularization
+
+No regularization was used. 
+
+## Training
+
+Training is done with 20 epochs and batch size of 256 with an Nvidia GTX 1060 GPU. The validation accuracy of 0.995 was achieved. 
+
+## Results
+
+The test results were rather poor, only reaching 0.930 accuracy on the test data set of 12630 examples. Many test images taken from the internet were tested. 4 out of 5 predictions were correct. The network could not detect "80kph" sign. It was detected as a 20kph sign. 
+The results could be greatly improved by the following. 
+1. Better preprocessing like histogram equalization
+2. Adding regularization like dropout, l2 regularizer etc. 
